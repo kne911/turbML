@@ -6,7 +6,7 @@
 
 # In[1]:
 
-import os
+from pathlib import Path
 import numpy as np
 import torch 
 import sys 
@@ -25,6 +25,9 @@ plt.rcParams.update({'font.size': 22})
 plt.interactive(True)
 plt.close('all')
 
+# Create output path
+outputPath = 'Output/'
+Path("Output").mkdir(parents=True, exist_ok=True)
 
 init_time = time.time()
 
@@ -43,7 +46,7 @@ vv_DNS=vel_DNS[:,4]**2
 ww_DNS=vel_DNS[:,5]**2
 uv_DNS=vel_DNS[:,6]
 
-os.mkdir('Output')
+
 dudy_DNS  = np.gradient(u_DNS,yplus_DNS)
 
 
