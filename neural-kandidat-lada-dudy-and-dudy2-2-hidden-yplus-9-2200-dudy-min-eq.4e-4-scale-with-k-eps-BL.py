@@ -6,7 +6,6 @@
 
 # In[1]:
 
-
 import numpy as np
 import torch 
 import sys 
@@ -34,49 +33,42 @@ vel_DNS=np.genfromtxt("vel_11000_DNS_no-text.dat", dtype=None,comments="%")
 # % Wall-normal profiles:
 # y/\delta_{99}       y+          U+          urms+       vrms+       wrms+       uv+         prms+       pu+         pv+         S(u)        F(u)        dU+/dy+     V+
 
-
 y_DNS=vel_DNS[:,0]
 yplus_DNS=vel_DNS[:,1]
 u_DNS=vel_DNS[:,2]
-uu_DNS=vel_DNS[:,3]**2
+uu_DNS=vel_DNS[:,3]**2   #u_rms**2 
 vv_DNS=vel_DNS[:,4]**2
 ww_DNS=vel_DNS[:,5]**2
 uv_DNS=vel_DNS[:,6]
 
-
 dudy_DNS  = np.gradient(u_DNS,yplus_DNS)
-
 
 k_DNS  = 0.5*(uu_DNS+vv_DNS+ww_DNS)
 
 # y/d99           y+              Produc.         Advect.         Tur. flux       Pres. flux      Dissip
-#DNS_RSTE = np.genfromtxt("/chalmers/users/lada/DNS-boundary-layers-jimenez/balances_6500_Re_theta.6500.bal.uu.txt",comments="%")
-#
+
 #prod_DNS = -DNS_RSTE[:,2]*3/2 #multiply by 3/2 to get P^k from P_11
 #eps_DNS = -DNS_RSTE[:,6]*3/2  #multiply by 3/2 to get eps from eps_11
 #yplus_DNS_uu = DNS_RSTE[:,1]
 
 DNS_RSTE = np.genfromtxt("bud_11000.prof",comments="%")
 
-eps_DNS = -DNS_RSTE[:,4]
+eps_DNS = -DNS_RSTE[:,4]  #diss+
 yplus_DNS_uu = yplus_DNS
 
-
 # fix wall
-eps_DNS[0]=eps_DNS[1]
+eps_DNS[0]=eps_DNS[1]     #???
 
 
 #-----------------Data_manipulation--------------------
 
 
 # choose values for 30 < y+ < 1000
-#index_choose=np.nonzero((yplus_DNS > 30 )  & (yplus_DNS< 1000 ))
-index_choose=np.nonzero((yplus_DNS > 9 )  & (yplus_DNS< 2200 ))
+index_choose=np.nonzero((yplus_DNS > 30 )  & (yplus_DNS< 1000 ))
 
 # set a min on dudy
-# set a min on dudy
-dudy_DNS = np.maximum(dudy_DNS,4e-4)
-
+#cannot go lower than 4e-4
+dudy_DNS = np.maximum(dudy_DNS,4e-4) 
 
 uv_DNS    =  uv_DNS[index_choose]
 uu_DNS    =  uu_DNS[index_choose]
@@ -89,14 +81,10 @@ yplus_DNS =  yplus_DNS[index_choose]
 y_DNS     =  y_DNS[index_choose]
 u_DNS     =  u_DNS[index_choose]
 
-# Calculate ny_t and time-scale tau
+# Calculate ny_t 
 viscous_t = k_DNS**2/eps_DNS 
-# tau       = viscous_t/abs(uv_DNS)
-#DNS
-
 dudy_DNS_org = np.copy(dudy_DNS)
-
-tau_DNS = k_DNS/eps_DNS
+tau_DNS = k_DNS/eps_DNS  #time-scale tau: tau= viscous_t/abs(uv_DNS)
 
 # make dudy non-dimensional
 #dudy_DNS = dudy_DNS*tau_DNS
@@ -139,8 +127,6 @@ plt.legend(loc="best",fontsize=12)
 plt.savefig('prod-diss-DNS-dudy2-and-tau-2-hidden-9-yplus-2200-dudy-min-eq.4e-4-scale-with-ustar-and-nu-BL.png')
 
 
-
-
 # transpose the target vector to make it a column vector  
 y = c.transpose()
 
@@ -167,8 +153,6 @@ X[:,1] = scaler_dudy.fit_transform(dudy_DNS_inv_scaled)[:,0]
 # split the feature matrix and target vector into training and validation sets
 # test_size=0.2 means we reserve 20% of the data for validation
 # random_state=42 is a fixed seed for the random number generator, ensuring reproducibility
-
-random_state = randrange(100)
 
 indices = np.arange(len(X))
 X_train, X_test, y_train, y_test, index_train, index_test = train_test_split(X, y, indices,test_size=0.2,shuffle=True,random_state=42)
@@ -214,19 +198,8 @@ tau_DNS_test = tau_DNS[index_test]
 
 # Set up hyperparameters
 learning_rate = 1e-1
-learning_rate = 5.e-1  
-#learning_rate = 10e-1
-#learning_rate = 0.9
-#learning_rate = 0.1
-#learning_rate = 0.2
-#learning_rate = 0.2
 my_batch_size = 5
-#my_batch_size = 30
-#my_batch_size = 5
-#my_batch_size = 3
-epochs = 10000
-epochs = 40000
-#epochs = 30
+epochs = 30
 
 # convert the numpy arrays to PyTorch tensors with float32 data type
 X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
@@ -234,9 +207,6 @@ y_train_tensor = torch.tensor(y_train, dtype=torch.float32)
 X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
 y_test_tensor = torch.tensor(y_test, dtype=torch.float32)
 
-# create PyTorch datasets and dataloaders for the training and validation sets
-# a TensorDataset wraps the feature and target tensors into a single dataset
-# a DataLoader loads the data in batches and shuffles the batches if shuffle=True
 train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
 train_loader = DataLoader(train_dataset, shuffle=False, batch_size=my_batch_size)
 test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
@@ -246,7 +216,7 @@ test_loader = DataLoader(test_dataset, shuffle=False, batch_size=my_batch_size)
 print('len(test_dataset)',len(test_dataset))
 print('len(train_dataset)',len(train_dataset))
 print('train_dataset[0:2]',train_dataset[0:2])
-#
+
 # show dataloader
 k=5
 #train_k = next(itertools.islice(train_loader, k, None))
@@ -273,7 +243,6 @@ for k in range(0,Nx):
   train_k = train_dataset[k]
   k_train = index_train[k]
   yplus = yplus_DNS[k_train]
-# print ('k,k_train,c_0_train,yplus',k,k_train,train_k[1][0][0],yplus)
   print ('k,k_train,c_0_train,yplus',k,k_train,train_dataset[k][1][0],yplus)
   if k == 0: 
      plt.plot(c_0_DNS[k_train],yplus, 'ro',label='target')
@@ -298,90 +267,13 @@ class ThePredictionMachine(nn.Module):
         self.hidden1 = nn.Linear(50, 50)
         self.hidden2 = nn.Linear(50, 2)
 
-#       self.input   = nn.Linear(2, 50)
-#       self.hidden1 = nn.Linear(50, 50)
-#       self.hidden2 = nn.Linear(50, 25)
-#       self.hidden3 = nn.Linear(25, 2)
-
-#       self.input   = nn.Linear(2, 50)
-#       self.hidden1 = nn.Linear(50, 50)
-#       self.hidden2 = nn.Linear(50, 50)
-#       self.hidden3 = nn.Linear(50, 25)
-#       self.hidden4 = nn.Linear(25, 2)
-
-#       self.input   = nn.Linear(2, 50)
-#       self.hidden1 = nn.Linear(50, 50)
-#       self.hidden2 = nn.Linear(50, 50)
-#       self.hidden3 = nn.Linear(50, 50)
-#       self.hidden4 = nn.Linear(50, 25)
-#       self.hidden5 = nn.Linear(25, 2)
-
-#       self.input   = nn.Linear(2, 50)
-#       self.hidden1 = nn.Linear(50, 50)
-#       self.hidden2 = nn.Linear(50, 50)
-#       self.hidden3 = nn.Linear(50, 50)
-#       self.hidden4 = nn.Linear(50, 50)
-#       self.hidden5 = nn.Linear(50, 25)
-#       self.hidden6 = nn.Linear(25, 2)
-
-
-#       self.input   = nn.Linear(2, 50)
-#       self.hidden1 = nn.Linear(50, 50)
-#       self.hidden2 = nn.Linear(50, 50)
-#       self.hidden3 = nn.Linear(50, 50)
-#       self.hidden4 = nn.Linear(50, 50)
-#       self.hidden5 = nn.Linear(50, 50)
-#       self.hidden6 = nn.Linear(50, 50)
-#       self.hidden7 = nn.Linear(50, 25)
-#       self.hidden8 = nn.Linear(25, 2)
-
-
-
     def forward(self, x):
         x = nn.functional.relu(self.input(x))
         x = nn.functional.relu(self.hidden1(x))
         x = self.hidden2(x)
-
-#       x = nn.functional.relu(self.input(x))
-#       x = nn.functional.relu(self.hidden1(x))
-#       x = nn.functional.relu(self.hidden2(x))
-#       x = self.hidden3(x)
-
-#       x = nn.functional.relu(self.input(x))
-#       x = nn.functional.relu(self.hidden1(x))
-#       x = nn.functional.relu(self.hidden2(x))
-#       x = nn.functional.relu(self.hidden3(x))
-#       x = self.hidden4(x)
-
-#       x = nn.functional.relu(self.input(x))
-#       x = nn.functional.relu(self.hidden1(x))
-#       x = nn.functional.relu(self.hidden2(x))
-#       x = nn.functional.relu(self.hidden3(x))
-#       x = nn.functional.relu(self.hidden4(x))
-#       x = self.hidden5(x)
-
-#       x = nn.functional.relu(self.input(x))
-#       x = nn.functional.relu(self.hidden1(x))
-#       x = nn.functional.relu(self.hidden2(x))
-#       x = nn.functional.relu(self.hidden3(x))
-#       x = nn.functional.relu(self.hidden4(x))
-#       x = nn.functional.relu(self.hidden5(x))
-#       x = self.hidden6(x)
-
-#       x = nn.functional.relu(self.input(x))
-#       x = nn.functional.relu(self.hidden1(x))
-#       x = nn.functional.relu(self.hidden2(x))
-#       x = nn.functional.relu(self.hidden3(x))
-#       x = nn.functional.relu(self.hidden4(x))
-#       x = nn.functional.relu(self.hidden5(x))
-#       x = nn.functional.relu(self.hidden6(x))
-#       x = nn.functional.relu(self.hidden7(x))
-#       x = self.hidden8(x)
-
         return x
 
 # In[6]:
-
 
 def train_loop(dataloader, model, loss_fn, optimizer):
     size = len(dataloader.dataset)
@@ -425,11 +317,8 @@ start_time = time.time()
 # Instantiate a neural network
 neural_net = ThePredictionMachine()
 
-# Initialize the loss function
+# Initialize the loss function and optimizer
 loss_fn = nn.MSELoss()
-
-# Choose loss function, check out https://pytorch.org/docs/stable/optim.html for more info
-# In this case we choose Stocastic Gradient Descent
 optimizer = torch.optim.SGD(neural_net.parameters(), lr=learning_rate)
 
 
@@ -557,8 +446,6 @@ plt.xlabel("$c_2$")
 plt.ylabel("$y^+$")
 plt.legend(loc="best",fontsize=12)
 plt.savefig('c2-dudy2-and-dudy-2-hidden-9-yplus-2200-dudy-min-eq.4e-4-scale-with-k-eps-units-BL.png')
-
-
 
 
 ########################## uu
