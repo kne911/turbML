@@ -1,6 +1,6 @@
 import numpy as np
 
-def GetData(case: str, minYplus, maxYplus, maxDudy = 4e-4):
+def GetInputData(case: str, minYplus, maxYplus, maxDudy = 4e-4):
     if case == 'BoundaryLayer':
         vel_DNS=np.genfromtxt("../Data/vel_11000_DNS_no-text.dat", comments="%")
         bud_DNS=np.genfromtxt("../Data/bud_11000.prof", comments="%")
@@ -54,4 +54,22 @@ def GetData(case: str, minYplus, maxYplus, maxDudy = 4e-4):
     print('Returning data from: ' + case + '. Min yplus: ' + str(minYplus) + '. Max yplus: ' + str(maxYplus))
 
     return y_DNS[mask], yplus_DNS[mask], u_DNS[mask], uu_DNS[mask], vv_DNS[mask], ww_DNS[mask], uv_DNS[mask], k_DNS[mask], eps_DNS[mask], dudy_DNS[mask]
+
+def GetC0andC2(k_DNS, eps_DNS, dudy_DNS, uu_DNS, vv_DNS, ww_DNS):
+
+    # Calculate ny_t and time-scale tau
+    #viscous_t = k_DNS**2/eps_DNS 
+    # tau       = viscous_t/abs(uv_DNS)
+    tau_DNS = k_DNS/eps_DNS
+    a11_DNS=uu_DNS/k_DNS-0.66666
+    #a22_DNS=vv_DNS/k_DNS-0.66666
+    a33_DNS=ww_DNS/k_DNS-0.66666
+
+    c_2_DNS=(2*a11_DNS+a33_DNS)/tau_DNS**2/dudy_DNS**2
+    c_0_DNS=-6*a33_DNS/tau_DNS**2/dudy_DNS**2
+
+    c = np.array([c_0_DNS,c_2_DNS])
+    
+    print('Returning c = [c0, c2]')
+    return c
 
