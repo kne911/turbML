@@ -55,6 +55,14 @@ elif name_txt== "./Data/Re550.dat":
    vv_DNS=vel_DNS[:,4]**2
    ww_DNS=vel_DNS[:,5]**2
    uv_DNS=vel_DNS[:,10]
+elif name_txt== "./Data/LM_Channel_5200_vel_fluc_prof.dat":
+   y_DNS= vel_DNS[:,0]
+   yplus_DNS=vel_DNS[:,1]
+   u_DNS= np.ones((len(y_DNS),))/ (4.14872e-02)
+   uu_DNS=vel_DNS[:,2]**2   #u_rms**2 
+   vv_DNS=vel_DNS[:,3]**2
+   ww_DNS=vel_DNS[:,4]**2
+   uv_DNS=vel_DNS[:,5]
 
 dudy_DNS  = np.gradient(u_DNS,yplus_DNS)
 
