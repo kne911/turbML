@@ -70,6 +70,5 @@ def GetC0andC2(k_DNS, eps_DNS, dudy_DNS, uu_DNS, vv_DNS, ww_DNS):
 
     c = np.array([c_0_DNS,c_2_DNS])
     
-    print('Returning c = [c0, c2]')
-    return c
-
+    print('Returning c = [c0, c2], a11 and a33')
+    return c, a11_DNS, a33_DNS
