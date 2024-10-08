@@ -33,13 +33,13 @@ Path("Output").mkdir(parents=True, exist_ok=True)
 init_time = time.time()
 
 # load DNS data
-name_txt= "./Data/Re550.dat"
+name_txt= "./Data/vel_11000_DNS_no-text.dat"
 vel_DNS=np.genfromtxt(name_txt, dtype=None,comments="%")
 
 # % Wall-normal profiles:
 # y/\delta_{99}       y+          U+          urms+       vrms+       wrms+       uv+         prms+       pu+         pv+         S(u)        F(u)        dU+/dy+     V+
 
-if name_txt== "./Data/vel_11000_DNS_no-text":
+if name_txt== "./Data/vel_11000_DNS_no-text.dat":
    y_DNS=vel_DNS[:,0]
    yplus_DNS=vel_DNS[:,1]
    u_DNS=vel_DNS[:,2]
@@ -55,10 +55,10 @@ elif name_txt== "./Data/Re550.dat":
    vv_DNS=vel_DNS[:,4]**2
    ww_DNS=vel_DNS[:,5]**2
    uv_DNS=vel_DNS[:,10]
-elif name_txt== "./Data/LM_Channel_5200_RSTE_k_prof.dat":
+elif name_txt== "./Data/LM_Channel_5200_vel_fluc_prof.dat":
    y_DNS= vel_DNS[:,0]
    yplus_DNS=vel_DNS[:,1]
-   u_DNS= np.ones((len(y_DNS), 1))/ (4.14872e-02)
+   u_DNS= np.ones((len(y_DNS),))/ (4.14872e-02)
    uu_DNS=vel_DNS[:,2]**2   #u_rms**2 
    vv_DNS=vel_DNS[:,3]**2
    ww_DNS=vel_DNS[:,4]**2
@@ -218,7 +218,7 @@ tau_DNS_test = tau_DNS[index_test]
 
 # Set up hyperparameters
 learning_rate = 1e-1
-my_batch_size = 5
+my_batch_size = 4
 epochs = 30
 
 # convert the numpy arrays to PyTorch tensors with float32 data type
@@ -283,13 +283,15 @@ class ThePredictionMachine(nn.Module):
         
         super(ThePredictionMachine, self).__init__()
 
-        self.input   = nn.Linear(2, 50)
-        self.hidden1 = nn.Linear(50, 50)
-        self.hidden2 = nn.Linear(50, 2)
+        self.input   = nn.Linear(2, 512)
+        self.hidden1 = nn.Linear(512, 1024)
+        self.hidden2 = nn.Linear(1024, 2)
+        self.batch1 = nn.BatchNorm1d(512)
+        self.batch2 = nn.BatchNorm1d(256)
 
     def forward(self, x):
-        x = nn.functional.relu(self.input(x))
-        x = nn.functional.relu(self.hidden1(x))
+        x = nn.functional.relu((self.input(x)))
+        x = nn.functional.relu((self.hidden1(x)))
         x = self.hidden2(x)
         return x
 
