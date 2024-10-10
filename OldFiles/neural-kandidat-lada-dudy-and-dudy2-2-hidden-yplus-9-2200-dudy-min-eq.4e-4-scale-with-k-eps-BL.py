@@ -6,6 +6,7 @@
 
 # In[1]:
 
+
 from pathlib import Path
 import numpy as np
 import torch 
@@ -32,54 +33,64 @@ Path("Output").mkdir(parents=True, exist_ok=True)
 init_time = time.time()
 
 # load DNS data
-vel_DNS=np.genfromtxt("Data/vel_11000_DNS_no-text.dat", dtype=None,comments="%")
+name_txt= "./Data/vel_11000_DNS_no-text.dat"
+vel_DNS=np.genfromtxt(name_txt, dtype=None,comments="%")
 
 # % Wall-normal profiles:
 # y/\delta_{99}       y+          U+          urms+       vrms+       wrms+       uv+         prms+       pu+         pv+         S(u)        F(u)        dU+/dy+     V+
 
-
-y_DNS=vel_DNS[:,0]
-yplus_DNS=vel_DNS[:,1]
-u_DNS=vel_DNS[:,2]
-uu_DNS=vel_DNS[:,3]**2
-vv_DNS=vel_DNS[:,4]**2
-ww_DNS=vel_DNS[:,5]**2
-uv_DNS=vel_DNS[:,6]
-
+if name_txt== "./Data/vel_11000_DNS_no-text":
+   y_DNS=vel_DNS[:,0]
+   yplus_DNS=vel_DNS[:,1]
+   u_DNS=vel_DNS[:,2]
+   uu_DNS=vel_DNS[:,3]**2   #u_rms**2 
+   vv_DNS=vel_DNS[:,4]**2
+   ww_DNS=vel_DNS[:,5]**2
+   uv_DNS=vel_DNS[:,6]
+elif name_txt== "./Data/Re550.dat":
+   y_DNS= vel_DNS[:,0]
+   yplus_DNS=vel_DNS[:,1]
+   u_DNS=vel_DNS[:,2]
+   uu_DNS=vel_DNS[:,3]**2   #u_rms**2 
+   vv_DNS=vel_DNS[:,4]**2
+   ww_DNS=vel_DNS[:,5]**2
+   uv_DNS=vel_DNS[:,10]
+elif name_txt== "./Data/LM_Channel_5200_vel_fluc_prof.dat":
+   y_DNS= vel_DNS[:,0]
+   yplus_DNS=vel_DNS[:,1]
+   u_DNS= np.ones((len(y_DNS),))/ (4.14872e-02)
+   uu_DNS=vel_DNS[:,2]**2   #u_rms**2 
+   vv_DNS=vel_DNS[:,3]**2
+   ww_DNS=vel_DNS[:,4]**2
+   uv_DNS=vel_DNS[:,5]
 
 dudy_DNS  = np.gradient(u_DNS,yplus_DNS)
-
 
 k_DNS  = 0.5*(uu_DNS+vv_DNS+ww_DNS)
 
 # y/d99           y+              Produc.         Advect.         Tur. flux       Pres. flux      Dissip
-#DNS_RSTE = np.genfromtxt("/chalmers/users/lada/DNS-boundary-layers-jimenez/balances_6500_Re_theta.6500.bal.uu.txt",comments="%")
-#
+
 #prod_DNS = -DNS_RSTE[:,2]*3/2 #multiply by 3/2 to get P^k from P_11
 #eps_DNS = -DNS_RSTE[:,6]*3/2  #multiply by 3/2 to get eps from eps_11
 #yplus_DNS_uu = DNS_RSTE[:,1]
 
 DNS_RSTE = np.genfromtxt("Data/bud_11000.prof",comments="%")
 
-eps_DNS = -DNS_RSTE[:,4]
+eps_DNS = -DNS_RSTE[:,4]  #diss+
 yplus_DNS_uu = yplus_DNS
 
-
 # fix wall
-eps_DNS[0]=eps_DNS[1]
+eps_DNS[0]=eps_DNS[1]     
 
 
 #-----------------Data_manipulation--------------------
 
 
 # choose values for 30 < y+ < 1000
-#index_choose=np.nonzero((yplus_DNS > 30 )  & (yplus_DNS< 1000 ))
-index_choose=np.nonzero((yplus_DNS > 9 )  & (yplus_DNS< 2200 ))
+index_choose=np.nonzero((yplus_DNS > 30 )  & (yplus_DNS< 1000 ))
 
-# set a min on dudy
-# set a min on dudy
-dudy_DNS = np.maximum(dudy_DNS,4e-4)
-
+# set a min on dudy (cannot go lower than 4e-4)
+dudy_DNS = np.maximum(dudy_DNS,4e-4) 
 
 uv_DNS    =  uv_DNS[index_choose]
 uu_DNS    =  uu_DNS[index_choose]
@@ -92,18 +103,13 @@ yplus_DNS =  yplus_DNS[index_choose]
 y_DNS     =  y_DNS[index_choose]
 u_DNS     =  u_DNS[index_choose]
 
-# Calculate ny_t and time-scale tau
+# Calculate ny_t  --> temporal scale
 viscous_t = k_DNS**2/eps_DNS 
-# tau       = viscous_t/abs(uv_DNS)
-#DNS
-
 dudy_DNS_org = np.copy(dudy_DNS)
-
-tau_DNS = k_DNS/eps_DNS
+tau_DNS = k_DNS/eps_DNS  #measured in s;    time-scale tau: tau= viscous_t/abs(uv_DNS)
 
 # make dudy non-dimensional
 #dudy_DNS = dudy_DNS*tau_DNS
-#tau_DNS = np.ones(len(dudy_DNS))
 
 # Calculate c_0 & c_2 of the Non-linear Eddy Viscosity Model
 
@@ -114,10 +120,10 @@ a33_DNS=ww_DNS/k_DNS-0.66666
 c_2_DNS=(2*a11_DNS+a33_DNS)/tau_DNS**2/dudy_DNS**2
 c_0_DNS=-6*a33_DNS/tau_DNS**2/dudy_DNS**2
 
-c = np.array([c_0_DNS,c_2_DNS])
+c = np.array([c_0_DNS,c_2_DNS])  
+#so that NN can output 2 params by outputting c
 
-
-########################## 2*a11_DNS+a33_DNS
+########################## 2*a11_DNS+a33_DNS  /  c2
 fig1,ax1 = plt.subplots()
 plt.subplots_adjust(left=0.20,bottom=0.20)
 ax1.scatter(2*a11_DNS+a33_DNS,yplus_DNS, marker="o", s=10, c="red", label="Neural Network")
@@ -126,8 +132,7 @@ plt.ylabel("$y^+$")
 plt.legend(loc="best",fontsize=12)
 plt.savefig('Output/2a11_DNS+a33_DNS-dudy2-and-tau-2-hidden-9-yplus-2200-dudy-min-eq.4e-4-scale-with-k-eps-units-BL.png')
 
-
-prod_DNS_1 = -uv_DNS*dudy_DNS
+prod_DNS_1 = -uv_DNS*dudy_DNS   #production of turbulence
 
 
 ########################## k-bal
@@ -140,8 +145,6 @@ plt.axis([0,200,0,0.3])
 plt.ylabel("$y^+$")
 plt.legend(loc="best",fontsize=12)
 plt.savefig('Output/prod-diss-DNS-dudy2-and-tau-2-hidden-9-yplus-2200-dudy-min-eq.4e-4-scale-with-ustar-and-nu-BL.png')
-
-
 
 
 # transpose the target vector to make it a column vector  
@@ -171,8 +174,6 @@ X[:,1] = scaler_dudy.fit_transform(dudy_DNS_inv_scaled)[:,0]
 # test_size=0.2 means we reserve 20% of the data for validation
 # random_state=42 is a fixed seed for the random number generator, ensuring reproducibility
 
-random_state = randrange(100)
-
 indices = np.arange(len(X))
 X_train, X_test, y_train, y_test, index_train, index_test = train_test_split(X, y, indices,test_size=0.2,shuffle=True,random_state=42)
 
@@ -189,7 +190,6 @@ X_train, X_test, y_train, y_test, index_train, index_test = train_test_split(X, 
 #
 #X_train = X[index_train]
 #y_train = y[index_train]
-
 
 
 dudy_DNS_train = dudy_DNS[index_train]
@@ -217,19 +217,8 @@ tau_DNS_test = tau_DNS[index_test]
 
 # Set up hyperparameters
 learning_rate = 1e-1
-learning_rate = 5.e-1  
-#learning_rate = 10e-1
-#learning_rate = 0.9
-#learning_rate = 0.1
-#learning_rate = 0.2
-#learning_rate = 0.2
 my_batch_size = 5
-#my_batch_size = 30
-#my_batch_size = 5
-#my_batch_size = 3
-epochs = 10000
-epochs = 40000
-#epochs = 30
+epochs = 30
 
 # convert the numpy arrays to PyTorch tensors with float32 data type
 X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
@@ -237,32 +226,29 @@ y_train_tensor = torch.tensor(y_train, dtype=torch.float32)
 X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
 y_test_tensor = torch.tensor(y_test, dtype=torch.float32)
 
-# create PyTorch datasets and dataloaders for the training and validation sets
-# a TensorDataset wraps the feature and target tensors into a single dataset
-# a DataLoader loads the data in batches and shuffles the batches if shuffle=True
 train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
 train_loader = DataLoader(train_dataset, shuffle=False, batch_size=my_batch_size)
 test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
 test_loader = DataLoader(test_dataset, shuffle=False, batch_size=my_batch_size)
 
 # show dataset
-print('len(test_dataset)',len(test_dataset))
 print('len(train_dataset)',len(train_dataset))
+print('len(test_dataset)',len(test_dataset))
 print('train_dataset[0:2]',train_dataset[0:2])
-#
+
 # show dataloader
 k=5
 #train_k = next(itertools.islice(train_loader, k, None))
 train_k_from_dataset = train_dataset[k]
 print ('X_train[5]',X_train[k])
 print ('train_k_from_dataset',train_k_from_dataset)
-print ('y_train[5]',y_train[k])
+print ('y_train[5]\n\n',y_train[k])
 
 #test_k = next(itertools.islice(test_loader, k, None))
 test_k_from_dataset = test_dataset[k]
 print ('X_test[5]',X_test[k])
 print ('test_k_from_dataset',test_k_from_dataset)
-print ('y_test[5]',y_test[k])
+print ('y_test[5]\n\n',y_test[k])
 
 # In[4]:
 
@@ -276,7 +262,6 @@ for k in range(0,Nx):
   train_k = train_dataset[k]
   k_train = index_train[k]
   yplus = yplus_DNS[k_train]
-# print ('k,k_train,c_0_train,yplus',k,k_train,train_k[1][0][0],yplus)
   print ('k,k_train,c_0_train,yplus',k,k_train,train_dataset[k][1][0],yplus)
   if k == 0: 
      plt.plot(c_0_DNS[k_train],yplus, 'ro',label='target')
@@ -289,7 +274,7 @@ plt.ylabel("$y^+$")
 plt.legend(loc="best",fontsize=12)
 plt.savefig('Output/c0-and-cNN-train-and-test-dudy2-and-dudy-2-hidden-9-yplus-2200-dudy-min-eq.4e-4-scale-with-ustar-and-nu-BL.png')
 
-# Let's set up a neural network:
+# NeuralNetwork
 
 class ThePredictionMachine(nn.Module):
 
@@ -301,90 +286,13 @@ class ThePredictionMachine(nn.Module):
         self.hidden1 = nn.Linear(50, 50)
         self.hidden2 = nn.Linear(50, 2)
 
-#       self.input   = nn.Linear(2, 50)
-#       self.hidden1 = nn.Linear(50, 50)
-#       self.hidden2 = nn.Linear(50, 25)
-#       self.hidden3 = nn.Linear(25, 2)
-
-#       self.input   = nn.Linear(2, 50)
-#       self.hidden1 = nn.Linear(50, 50)
-#       self.hidden2 = nn.Linear(50, 50)
-#       self.hidden3 = nn.Linear(50, 25)
-#       self.hidden4 = nn.Linear(25, 2)
-
-#       self.input   = nn.Linear(2, 50)
-#       self.hidden1 = nn.Linear(50, 50)
-#       self.hidden2 = nn.Linear(50, 50)
-#       self.hidden3 = nn.Linear(50, 50)
-#       self.hidden4 = nn.Linear(50, 25)
-#       self.hidden5 = nn.Linear(25, 2)
-
-#       self.input   = nn.Linear(2, 50)
-#       self.hidden1 = nn.Linear(50, 50)
-#       self.hidden2 = nn.Linear(50, 50)
-#       self.hidden3 = nn.Linear(50, 50)
-#       self.hidden4 = nn.Linear(50, 50)
-#       self.hidden5 = nn.Linear(50, 25)
-#       self.hidden6 = nn.Linear(25, 2)
-
-
-#       self.input   = nn.Linear(2, 50)
-#       self.hidden1 = nn.Linear(50, 50)
-#       self.hidden2 = nn.Linear(50, 50)
-#       self.hidden3 = nn.Linear(50, 50)
-#       self.hidden4 = nn.Linear(50, 50)
-#       self.hidden5 = nn.Linear(50, 50)
-#       self.hidden6 = nn.Linear(50, 50)
-#       self.hidden7 = nn.Linear(50, 25)
-#       self.hidden8 = nn.Linear(25, 2)
-
-
-
     def forward(self, x):
         x = nn.functional.relu(self.input(x))
         x = nn.functional.relu(self.hidden1(x))
         x = self.hidden2(x)
-
-#       x = nn.functional.relu(self.input(x))
-#       x = nn.functional.relu(self.hidden1(x))
-#       x = nn.functional.relu(self.hidden2(x))
-#       x = self.hidden3(x)
-
-#       x = nn.functional.relu(self.input(x))
-#       x = nn.functional.relu(self.hidden1(x))
-#       x = nn.functional.relu(self.hidden2(x))
-#       x = nn.functional.relu(self.hidden3(x))
-#       x = self.hidden4(x)
-
-#       x = nn.functional.relu(self.input(x))
-#       x = nn.functional.relu(self.hidden1(x))
-#       x = nn.functional.relu(self.hidden2(x))
-#       x = nn.functional.relu(self.hidden3(x))
-#       x = nn.functional.relu(self.hidden4(x))
-#       x = self.hidden5(x)
-
-#       x = nn.functional.relu(self.input(x))
-#       x = nn.functional.relu(self.hidden1(x))
-#       x = nn.functional.relu(self.hidden2(x))
-#       x = nn.functional.relu(self.hidden3(x))
-#       x = nn.functional.relu(self.hidden4(x))
-#       x = nn.functional.relu(self.hidden5(x))
-#       x = self.hidden6(x)
-
-#       x = nn.functional.relu(self.input(x))
-#       x = nn.functional.relu(self.hidden1(x))
-#       x = nn.functional.relu(self.hidden2(x))
-#       x = nn.functional.relu(self.hidden3(x))
-#       x = nn.functional.relu(self.hidden4(x))
-#       x = nn.functional.relu(self.hidden5(x))
-#       x = nn.functional.relu(self.hidden6(x))
-#       x = nn.functional.relu(self.hidden7(x))
-#       x = self.hidden8(x)
-
         return x
 
 # In[6]:
-
 
 def train_loop(dataloader, model, loss_fn, optimizer):
     size = len(dataloader.dataset)
@@ -414,7 +322,7 @@ def test_loop(dataloader, model, loss_fn):
         for X, y in dataloader:
             pred = model(X)
             test_loss += loss_fn(pred, y).item()
-#transform from tensor to numpy
+            #transform from tensor to numpy
             pred_numpy = pred.detach().numpy()
 
     test_loss /= num_batches
@@ -428,11 +336,8 @@ start_time = time.time()
 # Instantiate a neural network
 neural_net = ThePredictionMachine()
 
-# Initialize the loss function
+# Initialize the loss function and optimizer
 loss_fn = nn.MSELoss()
-
-# Choose loss function, check out https://pytorch.org/docs/stable/optim.html for more info
-# In this case we choose Stocastic Gradient Descent
 optimizer = torch.optim.SGD(neural_net.parameters(), lr=learning_rate)
 
 
@@ -562,8 +467,6 @@ plt.legend(loc="best",fontsize=12)
 plt.savefig('Output/c2-dudy2-and-dudy-2-hidden-9-yplus-2200-dudy-min-eq.4e-4-scale-with-k-eps-units-BL.png')
 
 
-
-
 ########################## uu
 fig1,ax1 = plt.subplots()
 plt.subplots_adjust(left=0.20,bottom=0.20)
@@ -583,7 +486,7 @@ ax1.plot(vv_DNS,yplus_DNS,'b-', label="Target")
 plt.xlabel("$\overline{v'v'}^+$")
 plt.ylabel("$y^+$")
 plt.legend(loc="best",fontsize=12)
-plt.savefig('vv-dudy2-and-dudy-2-hidden-9-yplus-2200-dudy-min-eq.4e-4-scale-with-k-eps-units-BL.png')
+plt.savefig('Output/vv-dudy2-and-dudy-2-hidden-9-yplus-2200-dudy-min-eq.4e-4-scale-with-k-eps-units-BL.png')
 
 ########################## ww
 fig1,ax1 = plt.subplots()
