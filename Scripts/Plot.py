@@ -1,21 +1,52 @@
 import matplotlib.pyplot as plt
+from LoadData import *
 
-def PlotData(yplus_DNS, uu_DNS, vv_DNS, ww_DNS, dudy_DNS, c_0_DNS , c_2_DNS, c0, c2, index_test, index_train):
+def PlotData(yplus_DNS, uu_DNS, vv_DNS, ww_DNS, dudy_DNS, tau_DNS, k_DNS, c_0_DNS, c_2_DNS, c0, c2, index_test, index_train, trainingCase, validationCase):
  
-    ########################## c0
-    plt.figure()
-    plt.plot(c_0_DNS[index_test], yplus_DNS[index_test],'bo',label='Test')
+    if index_test is None:
+        index_test = range(len(c0))
+    if index_train is None:
+        index_train = range(len(c0))
+
+    uu_NN, vv_NN, ww_NN = GetStresses(tau_DNS[index_test], dudy_DNS[index_test], k_DNS[index_test], c0, c2)
+    
+    plt.figure(figsize=(8,6))
+    plt.plot(c_0_DNS[index_test], yplus_DNS[index_test],'bo',label='Ground truth')
     plt.plot(c0, yplus_DNS[index_test], 'ro', label='Predictions')
     plt.xlabel("$c_0$")
     plt.ylabel("$y^+$")
+    plt.title(f'Training: {trainingCase} \n Validation: {validationCase}')
     plt.legend(loc="best",fontsize=12)
+    plt.savefig(f'Output/c0_{trainingCase}_{validationCase}.png')
     
-    plt.figure()
-    plt.plot(c_2_DNS[index_test], yplus_DNS[index_test],'bo',label='Test')
+    plt.figure(figsize=(8,6))
+    plt.plot(c_2_DNS[index_test], yplus_DNS[index_test],'bo',label='Ground truth')
     plt.plot(c2, yplus_DNS[index_test], 'ro', label='Predictions')
     plt.xlabel("$c_2$")
     plt.ylabel("$y^+$")
-    plt.legend(loc="best",fontsize=12)
+    plt.title(f'Training: {trainingCase} \n Validation: {validationCase}')
+    plt.legend(loc="upper center",fontsize=12)
+    plt.savefig(f'Output/c2_{trainingCase}_{validationCase}.png')
+    
+    
+    fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize=(10,6), sharey=True)
+    # plt.title(f'Training: {trainingCase} \n Validation: {validationCase}')
+    fig.suptitle(f'Training: {trainingCase} \n Validation: {validationCase}')
+    fig.supylabel('$y^+$')
+    ax1.scatter(uu_NN,yplus_DNS[index_test], marker="o", s=10, c="red", label="Predictions")
+    ax1.plot(uu_DNS, yplus_DNS, label="Ground truth")
+    ax1.legend()
+    ax1.set_xlabel("$\overline{u'u'}^+$")
+    ax2.scatter(vv_NN,yplus_DNS[index_test], marker="o", s=10, c="red")
+    ax2.plot(vv_DNS, yplus_DNS)
+    ax2.set_xlabel("$\overline{v'v'}^+$")
+    ax3.scatter(ww_NN,yplus_DNS[index_test], marker="o", s=10, c="red")
+    ax3.plot(ww_DNS, yplus_DNS)
+    ax3.set_xlabel("$\overline{w'w'}^+$")
+    plt.savefig(f'Output/stresses_{trainingCase}_{validationCase}.png')
+
+    
+
     
     # fig1,ax1 = plt.subplots()
     # plt.subplots_adjust(left=0.20,bottom=0.20)
