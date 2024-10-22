@@ -72,3 +72,14 @@ def GetC0andC2(k_DNS, eps_DNS, dudy_DNS, uu_DNS, vv_DNS, ww_DNS):
     
     print('Returning c = [c0, c2], a11 and a33')
     return c, a11_DNS, a33_DNS
+
+def GetStresses(tau_DNS_test, dudy_DNS_test, k_DNS_test, c0, c2):
+    a_11 = 1/12*tau_DNS_test**2*dudy_DNS_test**2*(c0 + 6*c2)
+    uu_NN = (a_11+0.6666)*k_DNS_test
+    #a_{22} = \frac{1}{12} \tau^2 \left(\frac{\D \Vb_1}{\dx_2}\right)^2(c_1 - 6c_2 + c_3)
+    a_22 = 1/12*tau_DNS_test**2*dudy_DNS_test**2*(c0 - 6*c2)
+    vv_NN = (a_22+0.6666)*k_DNS_test
+    # a_{33} = -\frac{1}{6} \tau^2 \left(\frac{\D \Vb_1}{\dx_2}\right)^2(c_1 + c_3)
+    a_33 = -1/6*tau_DNS_test**2*dudy_DNS_test**2*c0
+    ww_NN = (a_33+0.6666)*k_DNS_test
+    return uu_NN, vv_NN, ww_NN
